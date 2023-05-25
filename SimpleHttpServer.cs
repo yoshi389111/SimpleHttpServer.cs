@@ -22,14 +22,15 @@ class SimpleHttpServer
     static string port = "8000";
     static string host = "+";
     static string root = "./";
-    static bool temporaryListenAddress = false;
+    static string prefix = null;
 
     static void Main(string[] args)
     {
         ParseOptions(args);
-        string prefix = temporaryListenAddress
-            ? "http://+:80/Temporary_Listen_Addresses/"
-            : string.Format("http://{0}:{1}/", host, port);
+        if (prefix == null)
+        {
+            prefix = string.Format("http://{0}:{1}/", host, port);
+        }
         try
         {
             string prefixPath = Regex.Replace(prefix, @"https?://[^/]*", "");
@@ -108,15 +109,17 @@ class SimpleHttpServer
     {
         for (var i = 0; i < args.Length; i++)
         {
-            if (args[i].Equals("-t")) temporaryListenAddress = true;
+            if (args[i].Equals("-t")) prefix = "http://+:80/Temporary_Listen_Addresses/";
             else if (args[i].Equals("-p") && i+1 < args.Length) port = args[++i];
             else if (args[i].Equals("-b") && i+1 < args.Length) host = args[++i];
             else if (args[i].Equals("-r") && i+1 < args.Length) root = args[++i];
+            else if (args[i].Equals("-P") && i+1 < args.Length) prefix = args[++i];
             else
             {
                 Console.Error.WriteLine(
                     "usage: HttpServer [-p PORT] [-b ADDR] [-r DIR]\n" +
-                    "    or HttpServer [-t] [-r DIR]");
+                    "    or HttpServer [-t] [-r DIR]" +
+                    "    or HttpServer [-P PREFIX] [-r DIR]");
                 Environment.Exit(0);
             }
         }
