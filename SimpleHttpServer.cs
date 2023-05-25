@@ -3,7 +3,7 @@ using System.IO;
 using System.Net;
 using System.Text.RegularExpressions;
 
-class HttpServer
+class SimpleHttpServer
 {
     static string port = "8000";
     static string host = "+";
