@@ -18,6 +18,7 @@ class HttpServer
             : string.Format("http://{0}:{1}/", host, port);
         try
         {
+            string prefixPath = Regex.Replace(prefix, @"https?://[^/]*", "");
             using (var listener = new HttpListener())
             {
                 listener.Prefixes.Add(prefix);
@@ -29,7 +30,12 @@ class HttpServer
                     var request = context.Request;
                     using (var response = context.Response)
                     {
-                        string path = (root + Regex.Replace(request.RawUrl, "[?;].*$", ""))
+                        string rawUrl = request.RawUrl;
+                        if (0 < prefixPath.Length && rawUrl.StartsWith(prefixPath))
+                        {
+                            rawUrl = rawUrl.Substring(prefixPath.Length-1);
+                        }
+                        string path = (root + Regex.Replace(rawUrl, "[?;].*$", ""))
                             .Replace("//", "/").Replace("/", @"\");
                         if (path.EndsWith(@"\"))
                         {
