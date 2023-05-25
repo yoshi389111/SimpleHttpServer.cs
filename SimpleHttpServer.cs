@@ -84,8 +84,9 @@ class SimpleHttpServer
                                 response.ContentType = ContentType(path);
                                 response.OutputStream.Write(content, 0, content.Length);
                             }
-                            catch (Exception)
+                            catch (Exception e)
                             {
+                                Console.Error.WriteLine(e);
                                 response.StatusCode = (int) HttpStatusCode.Forbidden;
                             }
                         }
