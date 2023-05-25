@@ -23,6 +23,7 @@ Alternatively you can use `build.bat` .
 ```
 usage: HttpServer [-p PORT] [-b ADDR] [-r DIR]
     or HttpServer [-t] [-r DIR]
+    or HttpServer [-P PREFIX] [-r DIR]
 ```
 
 options:
@@ -31,6 +32,7 @@ options:
 * `-b ADDR` : Specify the address to bind to. The default is to accept all addresses.
 * `-r DIR` : Specify the document root. The default is the current directory.
 * `-t` : Use a prefix that does not require admin rights (`http://+:80/Temporary_Listen_Addresses/`)
+* `-P PREFIX` : specify a prefix.
 
 Administrative privileges are required unless the `-t` option is used.
 
