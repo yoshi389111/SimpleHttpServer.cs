@@ -5,6 +5,20 @@ using System.Text.RegularExpressions;
 
 class SimpleHttpServer
 {
+    static readonly string[,] MIME_TYPES = new string[,] {
+        { ".html", "text/html" },
+        { ".js", "text/javascript" },
+        { ".css", "text/css" },
+        { ".txt", "text/plain" },
+        { ".xml", "text/xml" },
+        { ".png", "image/png" },
+        { ".jpg", "image/jpeg" },
+        { ".jpeg", "image/jpeg" },
+        { ".gif", "image/gif" },
+        { ".svg", "image/svg+xml" },
+        { ".json", "application/json" },
+        { ".zip", "application/zip" },
+    };
     static string port = "8000";
     static string host = "+";
     static string root = "./";
@@ -104,17 +118,13 @@ class SimpleHttpServer
 
     static string ContentType(string path)
     {
-        if (path.EndsWith(".html")) return "text/html";
-        if (path.EndsWith(".js")) return "text/javascript";
-        if (path.EndsWith(".css")) return "text/css";
-        if (path.EndsWith(".txt")) return "text/plain";
-        if (path.EndsWith(".xml")) return "text/xml";
-        if (path.EndsWith(".png")) return "image/png";
-        if (path.EndsWith(".jpg")) return "image/jpeg";
-        if (path.EndsWith(".gif")) return "image/gif";
-        if (path.EndsWith(".svg")) return "image/svg+xml";
-        if (path.EndsWith(".json")) return "application/json";
-        if (path.EndsWith(".zip")) return "application/zip";
+        for (int i=0; i<MIME_TYPES.GetLength(0); i++)
+        {
+            if (path.EndsWith(MIME_TYPES[i, 0]))
+            {
+                return MIME_TYPES[i, 1];
+            }
+        }
         return "application/octet-stream";
     }
 }
