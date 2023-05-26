@@ -21,17 +21,17 @@ Alternatively you can use `build.bat` .
 ## Usage
 
 ```
-usage: SimpleHttpServer [-p PORT] [-b ADDR] [-r DIR]
-    or SimpleHttpServer [-t] [-r DIR]
-    or SimpleHttpServer [-P PREFIX] [-r DIR]
+usage: SimpleHttpServer [-r DIR] [-p PORT] [-b ADDR]
+    or SimpleHttpServer [-r DIR] [-t]
+    or SimpleHttpServer [-r DIR] [-P PREFIX]
 ```
 
 options:
 
+* `-r DIR` : Specify the document root. The default is the current directory.
 * `-p PORT` : Specify the port number to listen on. The default is 8000
 * `-b ADDR` : Specify the address to bind to. The default is to accept all addresses.
-* `-r DIR` : Specify the document root. The default is the current directory.
-* `-t` : Use a prefix that does not require admin rights (`http://+:80/Temporary_Listen_Addresses/`)
+* `-t` : Use a prefix that does not require admin privileges (`http://+:80/Temporary_Listen_Addresses/`)
 * `-P PREFIX` : specify a prefix.
 
 Administrative privileges are required unless the `-t` option is used.

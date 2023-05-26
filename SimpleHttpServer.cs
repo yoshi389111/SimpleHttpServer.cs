@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Net;
+using System.Text;
 using System.Text.RegularExpressions;
 
 class SimpleHttpServer
@@ -18,6 +19,7 @@ class SimpleHttpServer
         { ".svg", "image/svg+xml" },
         { ".json", "application/json" },
         { ".zip", "application/zip" },
+        { ".pdf", "application/pdf" },
     };
     static string port = "8000";
     static string host = "+";
@@ -33,7 +35,8 @@ class SimpleHttpServer
         }
         try
         {
-            string prefixPath = Regex.Replace(prefix, @"https?://[^/]*", "");
+            string prefixPath = WebUtility.UrlDecode(
+                Regex.Replace(prefix, @"https?://[^/]*", ""));
             using (var listener = new HttpListener())
             {
                 listener.Prefixes.Add(prefix);
@@ -45,36 +48,46 @@ class SimpleHttpServer
                     var request = context.Request;
                     using (var response = context.Response)
                     {
-                        string rawUrl = request.RawUrl;
-                        if (0 < prefixPath.Length && rawUrl.StartsWith(prefixPath))
+                        string rawPath = WebUtility.UrlDecode(
+                            Regex.Replace(request.RawUrl, "[?;].*$", ""));
+                        if (0 < prefixPath.Length && rawPath.StartsWith(prefixPath))
                         {
-                            rawUrl = rawUrl.Substring(prefixPath.Length-1);
+                            rawPath = rawPath.Substring(prefixPath.Length-1);
                         }
-                        string path = (root + Regex.Replace(rawUrl, "[?;].*$", ""))
-                            .Replace("//", "/").Replace("/", @"\");
-                        if (path.EndsWith(@"\"))
+                        string path = (root + rawPath).Replace("//", "/").Replace("/", @"\");
+                        if (path.EndsWith(@"\") && File.Exists(path + "index.html"))
                         {
                             path += "index.html";
                         }
                         byte[] content = null;
                         if (!request.HttpMethod.Equals("GET"))
                         {
-                            response.StatusCode = (int) HttpStatusCode.NotImplemented;
+                            response.StatusCode = (int) HttpStatusCode.NotImplemented; // 501
                         }
                         else if (path.Contains(@"\..\") || path.EndsWith(@"\.."))
                         {
-                            response.StatusCode = (int) HttpStatusCode.BadRequest;
+                            response.StatusCode = (int) HttpStatusCode.BadRequest; // 400
+                        }
+                        else if (path.EndsWith(@"\")
+                            && Directory.Exists(path.Substring(0, path.Length-1)))
+                        {
+                                string indexPage = CreateIndexPage(path, rawPath);
+                                content = Encoding.UTF8.GetBytes(indexPage);
+                                response.ContentType = "text/html";
+                                response.OutputStream.Write(content, 0, content.Length);
                         }
                         else if (Directory.Exists(path))
                         {
                             var hosts = request.Headers.GetValues("Host");
                             var thisHost = (hosts != null) ? hosts[0] : request.UserHostAddress;
-                            response.Headers.Set("Location", string.Format("http://{0}{1}/", thisHost, request.RawUrl));
-                            response.StatusCode = (int) HttpStatusCode.MovedPermanently;
+                            response.Headers.Set(
+                                "Location",
+                                string.Format("http://{0}{1}/", thisHost, request.RawUrl));
+                            response.StatusCode = (int) HttpStatusCode.MovedPermanently; // 301
                         }
                         else if (!File.Exists(path))
                         {
-                            response.StatusCode = (int) HttpStatusCode.NotFound;
+                            response.StatusCode = (int) HttpStatusCode.NotFound; // 404
                         }
                         else
                         {
@@ -87,10 +100,11 @@ class SimpleHttpServer
                             catch (Exception e)
                             {
                                 Console.Error.WriteLine(e);
-                                response.StatusCode = (int) HttpStatusCode.Forbidden;
+                                response.StatusCode = (int) HttpStatusCode.Forbidden; // 403
                             }
                         }
-                        Console.WriteLine(string.Format("{0} - - [{1}] \"{2} {3} HTTP/{4}\" {5} {6}",
+                        Console.WriteLine(
+                            string.Format("{0} - - [{1}] \"{2} {3} HTTP/{4}\" {5} {6}",
                             request.RemoteEndPoint.Address,
                             DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss K"),
                             request.HttpMethod, request.RawUrl, request.ProtocolVersion,
@@ -118,9 +132,9 @@ class SimpleHttpServer
             else
             {
                 Console.Error.WriteLine(
-                    "usage: SimpleHttpServer [-p PORT] [-b ADDR] [-r DIR]\n" +
-                    "    or SimpleHttpServer [-t] [-r DIR]" +
-                    "    or SimpleHttpServer [-P PREFIX] [-r DIR]");
+                    "usage: SimpleHttpServer [-r DIR] [-p PORT] [-b ADDR]\n" +
+                    "    or SimpleHttpServer [-r DIR] [-t]" +
+                    "    or SimpleHttpServer [-r DIR] [-P PREFIX]");
                 Environment.Exit(0);
             }
         }
@@ -136,5 +150,29 @@ class SimpleHttpServer
             }
         }
         return "application/octet-stream";
+    }
+
+    static string CreateIndexPage(string path, string urlPath)
+    {
+        string[] files = Directory.GetFileSystemEntries(path);
+        string indexPage = string.Format(
+            "<html><head><meta charset=\"UTF-8\" /></head>\n" +
+            "<body><h1>List of {0}</h1><ul>\n",
+            WebUtility.HtmlEncode(urlPath));
+        if (urlPath != "/")
+        {
+            indexPage += "<li><a href=\"..\">..</a></li>\n";
+        }
+        foreach (string file in files) {
+            string basename = Path.GetFileName(file);
+            string link = string.Format(
+                "<li><a href=\"{0}{2}\">{1}{2}</a></li>\n",
+                WebUtility.UrlEncode(basename),
+                WebUtility.HtmlEncode(basename),
+                Directory.Exists(file) ? "/" : "");
+            indexPage += link;
+        }
+        indexPage += "</ul></body></html>\n";
+        return indexPage;
     }
 }
