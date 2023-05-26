@@ -21,9 +21,9 @@ Alternatively you can use `build.bat` .
 ## Usage
 
 ```
-usage: HttpServer [-p PORT] [-b ADDR] [-r DIR]
-    or HttpServer [-t] [-r DIR]
-    or HttpServer [-P PREFIX] [-r DIR]
+usage: SimpleHttpServer [-p PORT] [-b ADDR] [-r DIR]
+    or SimpleHttpServer [-t] [-r DIR]
+    or SimpleHttpServer [-P PREFIX] [-r DIR]
 ```
 
 options:
