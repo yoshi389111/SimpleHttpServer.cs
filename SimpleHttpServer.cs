@@ -118,9 +118,9 @@ class SimpleHttpServer
             else
             {
                 Console.Error.WriteLine(
-                    "usage: HttpServer [-p PORT] [-b ADDR] [-r DIR]\n" +
-                    "    or HttpServer [-t] [-r DIR]" +
-                    "    or HttpServer [-P PREFIX] [-r DIR]");
+                    "usage: SimpleHttpServer [-p PORT] [-b ADDR] [-r DIR]\n" +
+                    "    or SimpleHttpServer [-t] [-r DIR]" +
+                    "    or SimpleHttpServer [-P PREFIX] [-r DIR]");
                 Environment.Exit(0);
             }
         }
