@@ -3,24 +3,10 @@ using System.IO;
 using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Web;
 
 class SimpleHttpServer
 {
-    static readonly string[,] MIME_TYPES = new string[,] {
-        { ".html", "text/html" },
-        { ".js", "text/javascript" },
-        { ".css", "text/css" },
-        { ".txt", "text/plain" },
-        { ".xml", "text/xml" },
-        { ".png", "image/png" },
-        { ".jpg", "image/jpeg" },
-        { ".jpeg", "image/jpeg" },
-        { ".gif", "image/gif" },
-        { ".svg", "image/svg+xml" },
-        { ".json", "application/json" },
-        { ".zip", "application/zip" },
-        { ".pdf", "application/pdf" },
-    };
     static string port = "8000";
     static string host = "+";
     static string root = "./";
@@ -94,7 +80,7 @@ class SimpleHttpServer
                             try
                             {
                                 content = File.ReadAllBytes(path);
-                                response.ContentType = ContentType(path);
+                                response.ContentType = MimeMapping.GetMimeMapping(path);
                                 response.OutputStream.Write(content, 0, content.Length);
                             }
                             catch (Exception e)
@@ -138,18 +124,6 @@ class SimpleHttpServer
                 Environment.Exit(0);
             }
         }
-    }
-
-    static string ContentType(string path)
-    {
-        for (int i=0; i<MIME_TYPES.GetLength(0); i++)
-        {
-            if (path.EndsWith(MIME_TYPES[i, 0]))
-            {
-                return MIME_TYPES[i, 1];
-            }
-        }
-        return "application/octet-stream";
     }
 
     static string CreateIndexPage(string path, string urlPath)
