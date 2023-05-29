@@ -3,111 +3,107 @@ using System.IO;
 using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Web;
 
-class SimpleHttpServer
+public class SimpleHttpServer
 {
-    static readonly string[,] MIME_TYPES = new string[,] {
-        { ".html", "text/html" },
-        { ".js", "text/javascript" },
-        { ".css", "text/css" },
-        { ".txt", "text/plain" },
-        { ".xml", "text/xml" },
-        { ".png", "image/png" },
-        { ".jpg", "image/jpeg" },
-        { ".jpeg", "image/jpeg" },
-        { ".gif", "image/gif" },
-        { ".svg", "image/svg+xml" },
-        { ".json", "application/json" },
-        { ".zip", "application/zip" },
-        { ".pdf", "application/pdf" },
-    };
-    static string port = "8000";
-    static string host = "+";
-    static string root = "./";
-    static string prefix = null;
+    private static string s_root = "./";
+    private static string s_prefix = null;
 
-    static void Main(string[] args)
+    public static void Main(string[] args) 
     {
-        ParseOptions(args);
-        if (prefix == null)
-        {
-            prefix = string.Format("http://{0}:{1}/", host, port);
-        }
         try
         {
+            ParseOptions(args);
             string prefixPath = WebUtility.UrlDecode(
-                Regex.Replace(prefix, @"https?://[^/]*", ""));
-            using (var listener = new HttpListener())
+                Regex.Replace(s_prefix, "https?://[^/]*", ""));
+
+            using (HttpListener listener = new HttpListener())
             {
-                listener.Prefixes.Add(prefix);
+                listener.Prefixes.Add(s_prefix);
                 listener.Start();
-                Console.WriteLine("Listening on " + prefix);
+                Console.WriteLine("Listening on " + s_prefix);
+
                 while (true)
                 {
-                    var context = listener.GetContext();
-                    var request = context.Request;
-                    using (var response = context.Response)
+                    HttpListenerContext context = listener.GetContext();
+                    HttpListenerRequest request = context.Request;
+
+                    using (HttpListenerResponse response = context.Response)
                     {
                         string rawPath = WebUtility.UrlDecode(
                             Regex.Replace(request.RawUrl, "[?;].*$", ""));
+
                         if (0 < prefixPath.Length && rawPath.StartsWith(prefixPath))
                         {
                             rawPath = rawPath.Substring(prefixPath.Length-1);
                         }
-                        string path = (root + rawPath).Replace("//", "/").Replace("/", @"\");
+
+                        string path = (s_root + rawPath)
+                            .Replace("//", "/").Replace("/", @"\");
+
                         if (path.EndsWith(@"\") && File.Exists(path + "index.html"))
                         {
                             path += "index.html";
                         }
+
                         byte[] content = null;
+
                         if (!request.HttpMethod.Equals("GET"))
                         {
-                            response.StatusCode = (int) HttpStatusCode.NotImplemented; // 501
+                            response.StatusCode = 501; // NotImplemented
                         }
                         else if (path.Contains(@"\..\") || path.EndsWith(@"\.."))
                         {
-                            response.StatusCode = (int) HttpStatusCode.BadRequest; // 400
+                            response.StatusCode = 400; // BadRequest
                         }
                         else if (path.EndsWith(@"\")
                             && Directory.Exists(path.Substring(0, path.Length-1)))
                         {
-                                string indexPage = CreateIndexPage(path, rawPath);
-                                content = Encoding.UTF8.GetBytes(indexPage);
-                                response.ContentType = "text/html";
-                                response.OutputStream.Write(content, 0, content.Length);
+                            string indexPage = CreateIndexPage(path, rawPath);
+                            content = Encoding.UTF8.GetBytes(indexPage);
+                            response.ContentType = "text/html";
+                            response.OutputStream.Write(content, 0, content.Length);
                         }
                         else if (Directory.Exists(path))
                         {
-                            var hosts = request.Headers.GetValues("Host");
-                            var thisHost = (hosts != null) ? hosts[0] : request.UserHostAddress;
-                            response.Headers.Set(
-                                "Location",
-                                string.Format("http://{0}{1}/", thisHost, request.RawUrl));
-                            response.StatusCode = (int) HttpStatusCode.MovedPermanently; // 301
+                            string[] hosts = request.Headers.GetValues("Host");
+                            string thisHost = (hosts != null)
+                                ? hosts[0]
+                                : request.UserHostAddress;
+                            response.Headers.Set("Location",
+                                string.Format("http{0}://{1}{2}/",
+                                    request.IsSecureConnection ? "s" : ""
+                                    thisHost,
+                                    request.RawUrl));
+                            response.StatusCode = 301; // MovedPermanently
                         }
                         else if (!File.Exists(path))
                         {
-                            response.StatusCode = (int) HttpStatusCode.NotFound; // 404
+                            response.StatusCode = 404; // NotFound
                         }
                         else
                         {
                             try
                             {
                                 content = File.ReadAllBytes(path);
-                                response.ContentType = ContentType(path);
+                                response.ContentType = MimeMapping.GetMimeMapping(path);
                                 response.OutputStream.Write(content, 0, content.Length);
                             }
                             catch (Exception e)
                             {
                                 Console.Error.WriteLine(e);
-                                response.StatusCode = (int) HttpStatusCode.Forbidden; // 403
+                                response.StatusCode = 403; // Forbidden
                             }
                         }
+
                         Console.WriteLine(
                             string.Format("{0} - - [{1}] \"{2} {3} HTTP/{4}\" {5} {6}",
                             request.RemoteEndPoint.Address,
                             DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss K"),
-                            request.HttpMethod, request.RawUrl, request.ProtocolVersion,
+                            request.HttpMethod,
+                            request.RawUrl,
+                            request.ProtocolVersion,
                             response.StatusCode,
                             (content == null ? 0 : content.Length)));
                     }
@@ -120,15 +116,33 @@ class SimpleHttpServer
         }
     }
 
-    static void ParseOptions(string[] args)
+    private static void ParseOptions(string[] args)
     {
-        for (var i = 0; i < args.Length; i++)
+        string port = "8000";
+        string host = "+";
+
+        for (int i = 0; i < args.Length; i++)
         {
-            if (args[i].Equals("-t")) prefix = "http://+:80/Temporary_Listen_Addresses/";
-            else if (args[i].Equals("-p") && i+1 < args.Length) port = args[++i];
-            else if (args[i].Equals("-b") && i+1 < args.Length) host = args[++i];
-            else if (args[i].Equals("-r") && i+1 < args.Length) root = args[++i];
-            else if (args[i].Equals("-P") && i+1 < args.Length) prefix = args[++i];
+            if (args[i].Equals("-t"))
+            {
+                s_prefix = "http://+:80/Temporary_Listen_Addresses/";
+            }
+            else if (args[i].Equals("-p") && i+1 < args.Length)
+            {
+                port = args[++i];
+            }
+            else if (args[i].Equals("-b") && i+1 < args.Length)
+            {
+                host = args[++i];
+            }
+            else if (args[i].Equals("-r") && i+1 < args.Length)
+            {
+                s_root = args[++i];
+            }
+            else if (args[i].Equals("-P") && i+1 < args.Length)
+            {
+                s_prefix = args[++i];
+            }
             else
             {
                 Console.Error.WriteLine(
@@ -138,41 +152,35 @@ class SimpleHttpServer
                 Environment.Exit(0);
             }
         }
-    }
 
-    static string ContentType(string path)
-    {
-        for (int i=0; i<MIME_TYPES.GetLength(0); i++)
+        if (s_prefix == null)
         {
-            if (path.EndsWith(MIME_TYPES[i, 0]))
-            {
-                return MIME_TYPES[i, 1];
-            }
+            s_prefix = string.Format("http://{0}:{1}/", host, port);
         }
-        return "application/octet-stream";
     }
 
-    static string CreateIndexPage(string path, string urlPath)
+    private static string CreateIndexPage(string path, string urlPath)
     {
-        string[] files = Directory.GetFileSystemEntries(path);
-        string indexPage = string.Format(
-            "<html><head><meta charset=\"UTF-8\" /></head>\n" +
-            "<body><h1>List of {0}</h1><ul>\n",
+        StringBuilder sb = new StringBuilder();
+        sb.Append("<html><head><meta charset=\"UTF-8\" /></head>\n");
+        sb.AppendFormat("<body><h1>List of {0}</h1><ul>\n",
             WebUtility.HtmlEncode(urlPath));
+
         if (urlPath != "/")
         {
-            indexPage += "<li><a href=\"..\">..</a></li>\n";
+            sb.Append("<li><a href=\"..\">..</a></li>\n");
         }
-        foreach (string file in files) {
+
+        foreach (string file in Directory.GetFileSystemEntries(path))
+        {
             string basename = Path.GetFileName(file);
-            string link = string.Format(
-                "<li><a href=\"{0}{2}\">{1}{2}</a></li>\n",
+            sb.AppendFormat("<li><a href=\"{0}{2}\">{1}{2}</a></li>\n",
                 WebUtility.UrlEncode(basename),
                 WebUtility.HtmlEncode(basename),
                 Directory.Exists(file) ? "/" : "");
-            indexPage += link;
         }
-        indexPage += "</ul></body></html>\n";
-        return indexPage;
+
+        sb.Append("</ul></body></html>\n");
+        return sb.ToString();
     }
 }
