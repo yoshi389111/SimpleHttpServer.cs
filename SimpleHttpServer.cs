@@ -73,7 +73,7 @@ public class SimpleHttpServer
                                 : request.UserHostAddress;
                             response.Headers.Set("Location",
                                 string.Format("http{0}://{1}{2}/",
-                                    request.IsSecureConnection ? "s" : ""
+                                    request.IsSecureConnection ? "s" : "",
                                     thisHost,
                                     request.RawUrl));
                             response.StatusCode = 301; // MovedPermanently
