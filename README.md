@@ -2,7 +2,7 @@
 
 ## Overview
 
-This is a simple web server.
+This is a simple web server for Windows.
 
 Compile with the C# compiler installed by default on Windows.
 
