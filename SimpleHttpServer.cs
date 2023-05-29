@@ -144,29 +144,26 @@ public class SimpleHttpServer
 
     private static string CreateIndexPage(string path, string urlPath)
     {
-        string[] files = Directory.GetFileSystemEntries(path);
-        string indexPage = string.Format(
-            "<html><head><meta charset=\"UTF-8\" /></head>\n" +
-            "<body><h1>List of {0}</h1><ul>\n",
+        StringBuilder sb = new StringBuilder();
+        sb.Append("<html><head><meta charset=\"UTF-8\" /></head>\n");
+        sb.AppendFormat("<body><h1>List of {0}</h1><ul>\n",
             WebUtility.HtmlEncode(urlPath));
 
         if (urlPath != "/")
         {
-            indexPage += "<li><a href=\"..\">..</a></li>\n";
+            sb.Append("<li><a href=\"..\">..</a></li>\n");
         }
 
-        foreach (string file in files)
+        foreach (string file in Directory.GetFileSystemEntries(path))
         {
             string basename = Path.GetFileName(file);
-            string link = string.Format(
-                "<li><a href=\"{0}{2}\">{1}{2}</a></li>\n",
+            sb.AppendFormat("<li><a href=\"{0}{2}\">{1}{2}</a></li>\n",
                 WebUtility.UrlEncode(basename),
                 WebUtility.HtmlEncode(basename),
                 Directory.Exists(file) ? "/" : "");
-            indexPage += link;
         }
 
-        indexPage += "</ul></body></html>\n";
-        return indexPage;
+        sb.Append("</ul></body></html>\n");
+        return sb.ToString();
     }
 }
