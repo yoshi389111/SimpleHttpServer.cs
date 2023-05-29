@@ -98,14 +98,14 @@ public class SimpleHttpServer
                         }
 
                         Console.WriteLine(
-                            string.Format("{0} - - [{1}] \"{2} {3} HTTP/{4}\" {5} {6}",
+                            "{0} - - [{1}] \"{2} {3} HTTP/{4}\" {5} {6}",
                             request.RemoteEndPoint.Address,
                             DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss K"),
                             request.HttpMethod,
                             request.RawUrl,
                             request.ProtocolVersion,
                             response.StatusCode,
-                            (content == null ? 0 : content.Length)));
+                            (content == null ? 0 : content.Length));
                     }
                 }
             }
