@@ -16,9 +16,9 @@ public class SimpleHttpServer
         {
             ParseOptions(args);
             string prefixPath = WebUtility.UrlDecode(
-                Regex.Replace(s_prefix, @"https?://[^/]*", ""));
+                Regex.Replace(s_prefix, "https?://[^/]*", ""));
 
-            using (var listener = new HttpListener())
+            using (HttpListener listener = new HttpListener())
             {
                 listener.Prefixes.Add(s_prefix);
                 listener.Start();
@@ -26,10 +26,10 @@ public class SimpleHttpServer
 
                 while (true)
                 {
-                    var context = listener.GetContext();
-                    var request = context.Request;
+                    HttpListenerContext context = listener.GetContext();
+                    HttpListenerRequest request = context.Request;
 
-                    using (var response = context.Response)
+                    using (HttpListenerResponse response = context.Response)
                     {
                         string rawPath = WebUtility.UrlDecode(
                             Regex.Replace(request.RawUrl, "[?;].*$", ""));
@@ -71,9 +71,11 @@ public class SimpleHttpServer
                             string thisHost = (hosts != null)
                                 ? hosts[0]
                                 : request.UserHostAddress;
-                            response.Headers.Set(
-                                "Location",
-                                string.Format("http://{0}{1}/", thisHost, request.RawUrl));
+                            response.Headers.Set("Location",
+                                string.Format("http{0}://{1}{2}/",
+                                    request.IsSecureConnection ? "s" : ""
+                                    thisHost,
+                                    request.RawUrl));
                             response.StatusCode = 301; // MovedPermanently
                         }
                         else if (!File.Exists(path))
@@ -119,13 +121,28 @@ public class SimpleHttpServer
         string port = "8000";
         string host = "+";
 
-        for (var i = 0; i < args.Length; i++)
+        for (int i = 0; i < args.Length; i++)
         {
-            if (args[i].Equals("-t")) { s_prefix = "http://+:80/Temporary_Listen_Addresses/"; }
-            else if (args[i].Equals("-p") && i+1 < args.Length) { port = args[++i]; }
-            else if (args[i].Equals("-b") && i+1 < args.Length) { host = args[++i]; }
-            else if (args[i].Equals("-r") && i+1 < args.Length) { s_root = args[++i]; }
-            else if (args[i].Equals("-P") && i+1 < args.Length) { s_prefix = args[++i]; }
+            if (args[i].Equals("-t"))
+            {
+                s_prefix = "http://+:80/Temporary_Listen_Addresses/";
+            }
+            else if (args[i].Equals("-p") && i+1 < args.Length)
+            {
+                port = args[++i];
+            }
+            else if (args[i].Equals("-b") && i+1 < args.Length)
+            {
+                host = args[++i];
+            }
+            else if (args[i].Equals("-r") && i+1 < args.Length)
+            {
+                s_root = args[++i];
+            }
+            else if (args[i].Equals("-P") && i+1 < args.Length)
+            {
+                s_prefix = args[++i];
+            }
             else
             {
                 Console.Error.WriteLine(
