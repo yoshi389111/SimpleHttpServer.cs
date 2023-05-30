@@ -7,10 +7,12 @@ using System.Web;
 
 public class SimpleHttpServer
 {
+    private readonly static string DirSep = Path.DirectorySeparatorChar.ToString();
+
     private static string s_root = "./";
     private static string s_prefix = null;
 
-    public static void Main(string[] args) 
+    public static void Main(string[] args)
     {
         try
         {
@@ -32,32 +34,32 @@ public class SimpleHttpServer
                     using (HttpListenerResponse response = context.Response)
                     {
                         string rawPath = WebUtility.UrlDecode(
-                            Regex.Replace(request.RawUrl, "[?;].*$", ""));
+                            Regex.Replace(request.RawUrl, "[?;].*$", "")
+                            ).Substring(prefixPath.Length-1);
 
-                        if (0 < prefixPath.Length && rawPath.StartsWith(prefixPath))
-                        {
-                            rawPath = rawPath.Substring(prefixPath.Length-1);
+                        if (rawPath == "") {
+                            rawPath = "/";
                         }
 
-                        string path = (s_root + rawPath)
-                            .Replace("//", "/").Replace("/", @"\");
+                        string path = Regex.Replace(s_root + rawPath, "/+", DirSep);
 
-                        if (path.EndsWith(@"\") && File.Exists(path + "index.html"))
+                        if (path.EndsWith(DirSep) && File.Exists(path + "index.html"))
                         {
                             path += "index.html";
                         }
 
-                        byte[] content = null;
+                        byte[] content = {};
 
                         if (!request.HttpMethod.Equals("GET"))
                         {
                             response.StatusCode = 501; // NotImplemented
                         }
-                        else if (path.Contains(@"\..\") || path.EndsWith(@"\.."))
+                        else if (path.Contains(DirSep + ".." + DirSep)
+                            || path.EndsWith(DirSep + ".."))
                         {
                             response.StatusCode = 400; // BadRequest
                         }
-                        else if (path.EndsWith(@"\")
+                        else if (path.EndsWith(DirSep)
                             && Directory.Exists(path.Substring(0, path.Length-1)))
                         {
                             string indexPage = CreateIndexPage(path, rawPath);
@@ -105,7 +107,7 @@ public class SimpleHttpServer
                             request.RawUrl,
                             request.ProtocolVersion,
                             response.StatusCode,
-                            (content == null ? 0 : content.Length));
+                            content.Length);
                     }
                 }
             }
@@ -138,6 +140,10 @@ public class SimpleHttpServer
             else if (args[i].Equals("-r") && i+1 < args.Length)
             {
                 s_root = args[++i];
+                if (!Directory.Exists(s_root))
+                {
+                    throw new DirectoryNotFoundException(s_root);
+                }
             }
             else if (args[i].Equals("-P") && i+1 < args.Length)
             {
@@ -146,9 +152,10 @@ public class SimpleHttpServer
             else
             {
                 Console.Error.WriteLine(
-                    "usage: SimpleHttpServer [-r DIR] [-p PORT] [-b ADDR]\n" +
-                    "    or SimpleHttpServer [-r DIR] [-t]" +
-                    "    or SimpleHttpServer [-r DIR] [-P PREFIX]");
+                    "usage: {0} [-r DIR] [-p PORT] [-b ADDR]\n" +
+                    "    or {0} [-r DIR] [-t]\n" +
+                    "    or {0} [-r DIR] [-P PREFIX]",
+                    AppDomain.CurrentDomain.FriendlyName);
                 Environment.Exit(0);
             }
         }
