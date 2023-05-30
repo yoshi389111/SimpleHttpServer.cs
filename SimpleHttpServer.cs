@@ -8,6 +8,8 @@ using System.Web;
 public class SimpleHttpServer
 {
     private readonly static string DirSep = Path.DirectorySeparatorChar.ToString();
+    private readonly static string ParentMid = DirSep + ".." + DirSep;
+    private readonly static string ParentLast = DirSep + "..";
 
     private static string s_root = "./";
     private static string s_prefix = null;
@@ -34,11 +36,11 @@ public class SimpleHttpServer
                     using (HttpListenerResponse response = context.Response)
                     {
                         string rawPath = WebUtility.UrlDecode(
-                            Regex.Replace(request.RawUrl, "[?;].*$", "")
-                            ).Substring(prefixPath.Length-1);
+                            Regex.Replace(request.RawUrl, "[?;].*$", ""))
+                            .Substring(prefixPath.Length-1);
 
                         if (rawPath == "") {
-                            rawPath = "/";
+                            rawPath = "/.";
                         }
 
                         string path = Regex.Replace(s_root + rawPath, "/+", DirSep);
@@ -48,36 +50,27 @@ public class SimpleHttpServer
                             path += "index.html";
                         }
 
-                        byte[] content = {};
+                        response.ContentLength64 = 0;
 
                         if (!request.HttpMethod.Equals("GET"))
                         {
                             response.StatusCode = 501; // NotImplemented
                         }
-                        else if (path.Contains(DirSep + ".." + DirSep)
-                            || path.EndsWith(DirSep + ".."))
+                        else if (path.Contains(ParentMid) || path.EndsWith(ParentLast))
                         {
                             response.StatusCode = 400; // BadRequest
                         }
-                        else if (path.EndsWith(DirSep)
-                            && Directory.Exists(path.Substring(0, path.Length-1)))
+                        else if (path.EndsWith(DirSep) && Directory.Exists(path))
                         {
                             string indexPage = CreateIndexPage(path, rawPath);
-                            content = Encoding.UTF8.GetBytes(indexPage);
+                            byte[] content = Encoding.UTF8.GetBytes(indexPage);
                             response.ContentType = "text/html";
+                            response.ContentLength64 = content.Length;
                             response.OutputStream.Write(content, 0, content.Length);
                         }
                         else if (Directory.Exists(path))
                         {
-                            string[] hosts = request.Headers.GetValues("Host");
-                            string thisHost = (hosts != null)
-                                ? hosts[0]
-                                : request.UserHostAddress;
-                            response.Headers.Set("Location",
-                                string.Format("http{0}://{1}{2}/",
-                                    request.IsSecureConnection ? "s" : "",
-                                    thisHost,
-                                    request.RawUrl));
+                            response.Headers.Set("Location", request.Url + "/");
                             response.StatusCode = 301; // MovedPermanently
                         }
                         else if (!File.Exists(path))
@@ -88,8 +81,9 @@ public class SimpleHttpServer
                         {
                             try
                             {
-                                content = File.ReadAllBytes(path);
+                                byte[] content = File.ReadAllBytes(path);
                                 response.ContentType = MimeMapping.GetMimeMapping(path);
+                                response.ContentLength64 = content.Length;
                                 response.OutputStream.Write(content, 0, content.Length);
                             }
                             catch (Exception e)
@@ -99,15 +93,14 @@ public class SimpleHttpServer
                             }
                         }
 
-                        Console.WriteLine(
-                            "{0} - - [{1}] \"{2} {3} HTTP/{4}\" {5} {6}",
+                        Console.WriteLine("{0} - - [{1}] \"{2} {3} HTTP/{4}\" {5} {6}",
                             request.RemoteEndPoint.Address,
                             DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss K"),
                             request.HttpMethod,
                             request.RawUrl,
                             request.ProtocolVersion,
                             response.StatusCode,
-                            content.Length);
+                            response.ContentLength64);
                     }
                 }
             }
@@ -140,10 +133,6 @@ public class SimpleHttpServer
             else if (args[i].Equals("-r") && i+1 < args.Length)
             {
                 s_root = args[++i];
-                if (!Directory.Exists(s_root))
-                {
-                    throw new DirectoryNotFoundException(s_root);
-                }
             }
             else if (args[i].Equals("-P") && i+1 < args.Length)
             {
@@ -158,6 +147,11 @@ public class SimpleHttpServer
                     AppDomain.CurrentDomain.FriendlyName);
                 Environment.Exit(0);
             }
+        }
+
+        if (!Directory.Exists(s_root))
+        {
+            throw new DirectoryNotFoundException(s_root);
         }
 
         if (s_prefix == null)
