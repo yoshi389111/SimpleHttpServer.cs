@@ -39,7 +39,8 @@ public class SimpleHttpServer
                             Regex.Replace(request.RawUrl, "[?;].*$", ""))
                             .Substring(prefixPath.Length-1);
 
-                        if (rawPath == "") {
+                        if (rawPath == "")
+                        {
                             rawPath = "/.";
                         }
 
