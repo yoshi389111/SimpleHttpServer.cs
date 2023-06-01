@@ -26,7 +26,7 @@ public class SimpleHttpServer
             {
                 listener.Prefixes.Add(s_prefix);
                 listener.Start();
-                Console.WriteLine("Listening on " + s_prefix);
+                Console.WriteLine("Listening on {0}", s_prefix);
 
                 while (true)
                 {
@@ -39,7 +39,8 @@ public class SimpleHttpServer
                             Regex.Replace(request.RawUrl, "[?;].*$", ""))
                             .Substring(prefixPath.Length-1);
 
-                        if (rawPath == "") {
+                        if (rawPath == "")
+                        {
                             rawPath = "/.";
                         }
 
