@@ -4,9 +4,10 @@
 
 This is a simple web server for Windows.
 
-Compile with the C# compiler installed by default on Windows.
-
-`C:\Windows\Microsoft.NET\Framework\v4.0.30319\csc.exe`
+> [!Tip]
+> Compile with the C# compiler installed by default on Windows.
+> 
+> `C:\Windows\Microsoft.NET\Framework\v4.0.30319\csc.exe`
 
 ## How to build
 
